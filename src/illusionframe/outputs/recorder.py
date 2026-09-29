@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class Recorder:
-    def __init__(self, run_dir: Path, fps: int = 24, gif_every: int = 3, gif_max_side: int = 360):
+    def __init__(self, run_dir: Path, fps: int = 24, gif_fps: int = 6, gif_max_side: int = 288):
         self.run_dir = Path(run_dir)
         (self.run_dir / "keyframes").mkdir(parents=True, exist_ok=True)
-        self.fps, self.gif_every, self.gif_max_side = fps, gif_every, gif_max_side
+        self.fps, self.gif_max_side = fps, gif_max_side
+        self.gif_every = max(1, round(fps / gif_fps))
+        self._palette: Image.Image | None = None
         self._video: cv2.VideoWriter | None = None
         self._gif: list[Image.Image] = []
         self._n = 0
@@ -32,7 +34,9 @@ class Recorder:
         if self._n % self.gif_every == 0:
             img = Image.fromarray(frame)
             img.thumbnail((self.gif_max_side, self.gif_max_side))
-            self._gif.append(img)
+            if self._palette is None:  # one shared palette: small files, no per-frame flicker
+                self._palette = img.quantize(colors=192, method=Image.Quantize.MEDIANCUT)
+            self._gif.append(img.quantize(palette=self._palette, dither=Image.Dither.FLOYDSTEINBERG))
         self._n += 1
 
     def keyframe(self, frame: np.ndarray, record: dict) -> None:
@@ -51,7 +55,6 @@ class Recorder:
                 append_images=self._gif[1:],
                 duration=ms,
                 loop=0,
-                optimize=True,
             )
         self._metrics.close()
         logger.info("wrote %d frames to %s", self._n, self.run_dir)

@@ -1,0 +1,31 @@
+# illusionframe evolve examples/painting.jpg --session examples/session.toml --mutator procedural
+# The mask keeps the village and cypress as they are and lets the sky mutate.
+
+[schedule]
+prompts = [
+    "swirling night sky made of stained glass, vivid blues and gold",
+    "a night sky of bioluminescent jellyfish, deep ocean colours",
+    "a night sky of molten copper and embers, oil painting",
+]
+iterations_per_prompt = 8
+strength_min = 0.3
+strength_max = 0.65
+breathe_period = 12
+seed = 7
+seed_hold = 4
+
+[loop]
+fade_seconds = 1.5
+feedback = 0.5
+mask_mode = "inside"
+feather = 16.0
+idle_strength = 0.12
+
+[mask]
+kind = "polygon"
+points = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.52], [0.62, 0.62], [0.32, 0.58], [0.0, 0.66]]
+
+[mutator]
+kind = "procedural"
+steps = 2
+tiny_vae = true
