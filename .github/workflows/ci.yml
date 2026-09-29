@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: sudo apt-get update && sudo apt-get install -y libgl1  # opencv-python needs libGL
+      - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: make test-ci
+
+  smoke-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - name: Lockfile has CPU-only torch
+        run: "! grep -q nvidia uv.lock"
+      - run: sudo apt-get update && sudo apt-get install -y libgl1
+      - run: uv sync --extra dev --extra diffusion
+      - name: Smoke import — the diffusion stack loads on torch 2.2.2
+        run: |
+          uv run python -c "
+          import illusionframe, illusionframe.cli, illusionframe.imageops
+          from diffusers import AutoPipelineForImage2Image, AutoencoderTiny
+          print('OK')
+          "

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+runs/
+*.mp4
+!docs/images/*.mp4
