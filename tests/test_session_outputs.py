@@ -133,3 +133,15 @@ def test_evolve_writes_a_run(tmp_path, painting, capsys, view):
     for name in ("out.mp4", "out.gif", "metrics.jsonl", "session.toml"):
         assert (run / name).exists(), name
     assert len(list((run / "keyframes").glob("*.png"))) == 3
+
+
+def test_parser_has_all_commands():
+    from illusionframe.cli import build_parser
+
+    parser = build_parser()
+    for argv in (
+        ["run", "x.jpg", "--view", "wall"],
+        ["setup", "x.jpg", "--mask", "grabcut"],
+        ["fetch-models"],
+    ):
+        assert parser.parse_args(argv).func is not None

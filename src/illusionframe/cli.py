@@ -86,6 +86,82 @@ def _cmd_evolve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_run(args: argparse.Namespace) -> int:  # pragma: no cover - needs a display
+    from PIL import Image
+
+    from illusionframe.config import get_settings
+    from illusionframe.engine.loop import LoopState
+    from illusionframe.engine.runner import LiveRunner
+    from illusionframe.mutators.procedural import ProceduralMutator
+    from illusionframe.outputs.window import LiveWindow
+
+    settings = get_settings()
+    session, canvas, mask = _prepare(args)
+    snaps = Path(args.out) / "snapshots"
+    idle = ProceduralMutator() if session.loop.idle_strength > 0 else None
+    state = LoopState(canvas, mask, session.loop, session.schedule, idle=idle)
+    window = LiveWindow(canvas, wall=args.view == "wall", feedback=session.loop.feedback)
+
+    def snapshot(frame):
+        snaps.mkdir(parents=True, exist_ok=True)
+        path = snaps / f"{time.strftime('%Y%m%d-%H%M%S')}.png"
+        Image.fromarray(frame).save(path)
+        logger.info("saved %s", path)
+
+    print("keys: space = mutate now, n = next prompt, v = wall preview, s = snapshot, q = quit")
+    LiveRunner(
+        state,
+        _mutator(session, settings),
+        window,
+        on_record=lambda r: logger.info("%s", r),
+        on_snapshot=snapshot,
+    ).run()
+    return 0
+
+
+def _cmd_setup(args: argparse.Namespace) -> int:  # pragma: no cover - needs a display
+    from illusionframe.imageops import to_canvas
+    from illusionframe.masks.build import build_mask
+    from illusionframe.outputs.window import pick_points
+    from illusionframe.session import MaskSpec, Session
+
+    session = Session.load(args.session if args.session and Path(args.session).exists() else None)
+    canvas = to_canvas(_load_picture(args.image))
+    segmenter = None
+    if args.mask == "boundarybrush":
+        from boundarybrush import get_segmenter
+
+        segmenter = get_segmenter(args.backend)
+
+    def preview(points, labels):
+        spec = MaskSpec(kind=args.mask, points=points, labels=labels, backend=args.backend)
+        if args.mask == "polygon" and len(points) < 3:
+            return None
+        if args.mask == "grabcut" and len(points) < 2:
+            return None
+        return build_mask(spec, canvas, segmenter)
+
+    print(f"{args.mask}: left click = add point (right click = exclude), enter = save, r = reset, q = quit")
+    picked = pick_points(canvas, "illusionFrame setup", preview)
+    if picked is None:
+        print("aborted; nothing saved")
+        return 1
+    session.mask = MaskSpec(kind=args.mask, points=picked[0], labels=picked[1], backend=args.backend)
+    Path(args.session).write_text(session.to_toml())
+    print(f"saved {args.session}")
+    return 0
+
+
+def _cmd_fetch_models(args: argparse.Namespace) -> int:
+    from illusionframe.config import get_settings
+    from illusionframe.mutators.diffusion import DiffusionMutator
+
+    settings = get_settings()
+    DiffusionMutator.from_pretrained(settings.model_id, settings.tiny_vae_id)
+    print(f"cached {settings.model_id} and {settings.tiny_vae_id}; runs now work with HF_HUB_OFFLINE=1")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="illusionframe", description=__doc__)
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -106,6 +182,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--out", default="runs")
     p.set_defaults(func=_cmd_evolve)
+
+    p = sub.add_parser("run", help="live window: the loop mutates the picture in front of you")
+    p.add_argument("image")
+    p.add_argument("--session", default=None)
+    p.add_argument("--mutator", choices=["procedural", "diffusion", "mock"], default=None)
+    p.add_argument("--view", choices=["canvas", "wall"], default="canvas")
+    p.add_argument("--out", default="runs")
+    p.set_defaults(func=_cmd_run)
+
+    p = sub.add_parser("setup", help="click a mask on the picture and save it into a session.toml")
+    p.add_argument("image")
+    p.add_argument("--mask", choices=["polygon", "grabcut", "boundarybrush"], default="polygon")
+    p.add_argument("--backend", default="slimsam", help="boundarybrush backend (slimsam, minisam, unet)")
+    p.add_argument("--session", default="session.toml", help="written (and extended if it exists)")
+    p.set_defaults(func=_cmd_setup)
+
+    p = sub.add_parser("fetch-models", help="download sd-turbo + TAESD for offline use")
+    p.set_defaults(func=_cmd_fetch_models)
     return parser
 
 
