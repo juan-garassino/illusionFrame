@@ -4,9 +4,14 @@
 change, and a loop keeps feeding the image back through a generative model — the sky turns to
 stained glass, then to jellyfish, then to embers — while the rest of the painting holds still.
 
-![procedural demo on The Starry Night](docs/images/demo_procedural.gif)
+| Diffusion (SD-Turbo, 16 iterations) | Procedural (no model, 24 iterations) |
+|---|---|
+| ![diffusion demo](docs/images/demo_diffusion.gif) | ![procedural demo](docs/images/demo_procedural.gif) |
 
-*Procedural mutator on Van Gogh's The Starry Night (public domain), sky mask only, 24 iterations.*
+*Van Gogh's The Starry Night (public domain), sky mask only: the village and cypress never change.
+Rendered on a 2014 MacBook CPU (~45 s per diffusion step). Per-iteration stats for the diffusion run:
+[demo_diffusion_metrics.jsonl](docs/images/demo_diffusion_metrics.jsonl) — clipped pixels stayed
+under 1%, so the drift guard never had to step in.*
 
 It is the first step toward projection mapping — festival-of-lights interventions, or projecting the
 mutation back onto the real painting on your wall. v1.0 runs entirely on a picture; camera, projector
@@ -68,6 +73,11 @@ Peak memory with diffusion ≈ 5.5 GB. Slow is fine for a painting — the displ
 the next mutation is computed — but a live festival piece wants a GPU machine (same code).
 
 ## Limits
+
+- The loop is built to *stay recognisably the painting*: colours are re-anchored every iteration and
+  strength tops out around 0.65, so prompts steer texture and light more than subject matter (in the
+  demo the "jellyfish" and "copper" prompts mostly show up as changes in the stars and the glow). Raise
+  `strength_max` and `feedback`, or lower the anchoring, for wilder drift.
 
 - Picture input only in v1.0 (no camera/projector yet); mapping onto a real painting is v1.1.
 - SD-Turbo is under the Stability AI community licence: fine for personal and portfolio use; check it

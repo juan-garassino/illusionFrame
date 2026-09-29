@@ -1,0 +1,16 @@
+{"iteration": 0, "feedback": 0.5, "luma": 0.3529, "saturation": 0.3985, "clipped": 0.0, "strength": 0.3, "seed": 7, "prompt_position": 0.0, "mutate_seconds": 45.042}
+{"iteration": 1, "feedback": 0.5, "luma": 0.3529, "saturation": 0.4713, "clipped": 0.0012, "strength": 0.3234, "seed": 7, "prompt_position": 0.125, "mutate_seconds": 50.489}
+{"iteration": 2, "feedback": 0.5, "luma": 0.3529, "saturation": 0.4833, "clipped": 0.0122, "strength": 0.3875, "seed": 7, "prompt_position": 0.25, "mutate_seconds": 36.437}
+{"iteration": 3, "feedback": 0.5, "luma": 0.3515, "saturation": 0.4754, "clipped": 0.028, "strength": 0.475, "seed": 7, "prompt_position": 0.375, "mutate_seconds": 36.465}
+{"iteration": 4, "feedback": 0.5, "luma": 0.3556, "saturation": 0.3672, "clipped": 0.0, "strength": 0.5625, "seed": 8, "prompt_position": 0.5, "mutate_seconds": 36.555}
+{"iteration": 5, "feedback": 0.5, "luma": 0.3562, "saturation": 0.4321, "clipped": 0.0009, "strength": 0.6266, "seed": 8, "prompt_position": 0.625, "mutate_seconds": 38.832}
+{"iteration": 6, "feedback": 0.5, "luma": 0.3549, "saturation": 0.4555, "clipped": 0.0068, "strength": 0.65, "seed": 8, "prompt_position": 0.75, "mutate_seconds": 37.936}
+{"iteration": 7, "feedback": 0.5, "luma": 0.3508, "saturation": 0.4629, "clipped": 0.0146, "strength": 0.6266, "seed": 8, "prompt_position": 0.875, "mutate_seconds": 42.497}
+{"iteration": 8, "feedback": 0.5, "luma": 0.3381, "saturation": 0.3994, "clipped": 0.0, "strength": 0.5625, "seed": 9, "prompt_position": 1.0, "mutate_seconds": 43.026}
+{"iteration": 9, "feedback": 0.5, "luma": 0.3407, "saturation": 0.451, "clipped": 0.0014, "strength": 0.475, "seed": 9, "prompt_position": 1.125, "mutate_seconds": 41.352}
+{"iteration": 10, "feedback": 0.5, "luma": 0.3419, "saturation": 0.4754, "clipped": 0.0059, "strength": 0.3875, "seed": 9, "prompt_position": 1.25, "mutate_seconds": 60.557}
+{"iteration": 11, "feedback": 0.5, "luma": 0.3416, "saturation": 0.5012, "clipped": 0.0135, "strength": 0.3234, "seed": 9, "prompt_position": 1.375, "mutate_seconds": 45.153}
+{"iteration": 12, "feedback": 0.5, "luma": 0.3454, "saturation": 0.3762, "clipped": 0.0, "strength": 0.3, "seed": 10, "prompt_position": 1.5, "mutate_seconds": 48.359}
+{"iteration": 13, "feedback": 0.5, "luma": 0.3448, "saturation": 0.4469, "clipped": 0.0003, "strength": 0.3234, "seed": 10, "prompt_position": 1.625, "mutate_seconds": 46.464}
+{"iteration": 14, "feedback": 0.5, "luma": 0.3432, "saturation": 0.4784, "clipped": 0.0019, "strength": 0.3875, "seed": 10, "prompt_position": 1.75, "mutate_seconds": 40.391}
+{"iteration": 15, "feedback": 0.5, "luma": 0.3401, "saturation": 0.4949, "clipped": 0.008, "strength": 0.475, "seed": 10, "prompt_position": 1.875, "mutate_seconds": 45.439}
