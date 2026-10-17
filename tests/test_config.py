@@ -32,3 +32,28 @@ def test_invalid_torch_threads_rejected_with_named_variable(monkeypatch, value):
     monkeypatch.setenv("ILLUSIONFRAME_TORCH_THREADS", value)
     with pytest.raises(ValueError, match="ILLUSIONFRAME_TORCH_THREADS"):
         Settings()
+
+
+@pytest.mark.parametrize("var", ["MODEL_ID", "TINY_VAE_ID"])
+@pytest.mark.parametrize(
+    "value", ["", "   ", "../../etc/passwd", "/abs/path", "org/../x", "no-namespace", "a/b/c"]
+)
+def test_malformed_model_ids_rejected(monkeypatch, var, value):
+    """Model ids are passed to from_pretrained(); a path-like or empty id must fail early."""
+    monkeypatch.setenv(f"ILLUSIONFRAME_{var}", value)
+    with pytest.raises(ValueError, match=f"ILLUSIONFRAME_{var}"):
+        Settings()
+
+
+@pytest.mark.parametrize("value", ["stabilityai/sd-turbo", "madebyollin/taesd", "Org_1/model.v2-x"])
+def test_valid_model_ids_accepted(monkeypatch, value):
+    monkeypatch.setenv("ILLUSIONFRAME_MODEL_ID", value)
+    assert Settings().model_id == value
+
+
+@pytest.mark.parametrize("value", ["", "  "])
+def test_empty_runs_dir_rejected(monkeypatch, value):
+    """An empty RUNS_DIR would silently become Path('.') and scatter runs into the cwd."""
+    monkeypatch.setenv("ILLUSIONFRAME_RUNS_DIR", value)
+    with pytest.raises(ValueError, match="ILLUSIONFRAME_RUNS_DIR"):
+        Settings()

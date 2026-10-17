@@ -45,3 +45,14 @@ def test_every_registered_verb_has_a_handler():
     sub = next(a for a in parser._actions if a.dest == "cmd")
     for name, verb in sub.choices.items():
         assert verb.get_default("func") is not None, f"verb {name!r} has no func"
+
+
+def test_python_dash_m_entrypoint_runs():
+    import subprocess
+    import sys
+
+    out = subprocess.run(
+        [sys.executable, "-m", "illusionframe", "--version"], capture_output=True, text=True, check=False
+    )
+    assert out.returncode == 0, out.stderr
+    assert __version__ in out.stdout
