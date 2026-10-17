@@ -21,3 +21,27 @@ def test_missing_subcommand_is_usage_error():
 
 def test_parser_prog_name():
     assert build_parser().prog == "illusionframe"
+
+
+def test_subcommand_without_handler_is_usage_error_not_crash(monkeypatch, capsys):
+    """G-009: a verb registered without set_defaults(func=...) must not raise AttributeError."""
+    import illusionframe.cli as cli
+
+    real = cli.build_parser
+
+    def parser_with_bare_verb():
+        parser = real()
+        sub = next(a for a in parser._actions if a.dest == "cmd")
+        sub.add_parser("bare")
+        return parser
+
+    monkeypatch.setattr(cli, "build_parser", parser_with_bare_verb)
+    assert cli.main(["bare"]) == 2
+    assert "usage" in capsys.readouterr().err.lower()
+
+
+def test_every_registered_verb_has_a_handler():
+    parser = build_parser()
+    sub = next(a for a in parser._actions if a.dest == "cmd")
+    for name, verb in sub.choices.items():
+        assert verb.get_default("func") is not None, f"verb {name!r} has no func"

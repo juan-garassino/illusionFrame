@@ -11,10 +11,12 @@ Automated security & bug sweep for `juan-garassino/illusionFrame` (public repo).
 | Lockfiles | `osv-scanner -r .` (could not run: api.osv.dev is blocked by the sandbox egress proxy) |
 | Code (SAST) | `bandit -r src -q` |
 | Custom grep (src) | `eval(`, `exec(`, `pickle`, `torch.load`, `allow_pickle`, `yaml.load`, `shell=True`, `os.system`, `verify=False`, `0.0.0.0`, `debug=True`, SQL string formatting, path traversal, SSRF, CORS `*` |
-| Secrets | `gitleaks detect --source . --redact -v` (all history, 11 commits) and `gitleaks detect --no-git --source . --redact` |
+| Secrets | `gitleaks detect --source . --redact -v` (all history, 12 commits as of run 2) and `gitleaks detect --no-git --source . --redact` |
 | GitHub Actions | SHA pinning of `uses:`, top-level `permissions:`, `${{ github.event.* }}` interpolated into `run:` |
 | Dockerfiles | none present |
 | Tests / lint | `uv sync --extra dev`, `uv run pytest -q`, `make test-ci`, `uv run ruff check .`, `uv run ruff format --check .` |
+| Coverage | `uv run --with pytest-cov pytest -q --cov=illusionframe --cov-report=term` (ad hoc; does not touch `uv.lock`) |
+| Makefile/CLI drift | `tests/test_makefile.py` (strict xfail until G-009 verbs exist) |
 
 ## Findings ledger
 
@@ -28,20 +30,26 @@ Automated security & bug sweep for `juan-garassino/illusionFrame` (public repo).
 | G-006 | med | CI: actions referenced by mutable tags (`@v4`, `@v3`) | `.github/workflows/ci.yml` | open (patch ready; needs `workflow` scope) | 2026-10-15 |
 | G-007 | low | CI: no `permissions:` block (default token scope) | `.github/workflows/ci.yml` | open (patch ready; needs `workflow` scope) | 2026-10-15 |
 | G-008 | low | bug: `ILLUSIONFRAME_TORCH_THREADS` accepted 0/negative and failed with an opaque `int()` error on junk | `src/illusionframe/config.py` | fixed | 2026-10-15 |
-| G-009 | low | quality: `make demo` / `make fetch-models` call CLI subcommands (`evolve`, `fetch-models`) and `examples/painting.jpg` that do not exist yet; `cli.main` calls `args.func` that no subparser sets | `Makefile`, `src/illusionframe/cli.py` | open | 2026-10-15 |
+| G-009 | low | quality: `make demo` / `make fetch-models` call CLI subcommands (`evolve`, `fetch-models`) and `examples/painting.jpg` that do not exist yet | `Makefile` | open (tracked by strict xfail `test_makefile_cli_verbs_are_registered`) | 2026-10-15 |
+| G-010 | low | bug: `cli.main` called `args.func` unconditionally, so any verb registered without `set_defaults(func=...)` crashed with `AttributeError` | `src/illusionframe/cli.py` | fixed (run 2) | 2026-10-17 |
 
-No secrets found (gitleaks: 0 in history, 0 in working tree). Bandit: 0 issues. Custom grep: 0 hits.
+No secrets found (gitleaks: 0 in history, 0 in working tree; re-checked run 2). Bandit: 0 issues. Custom grep: 0 hits.
 
 ## Metrics
 
+Run 2 (2026-10-17):
+
 | Metric | Before | After |
 |---|---|---|
-| Open vulns crit / high / med / low | 0 / 3 / 1 / 1 (21 dep advisories grouped in G-001..003) | 0 / 3 / 1 / 1 (CI hardening patch pending owner) |
-| Open bugs | 3 (G-004, G-005, G-008) | 1 (G-004, tracked by a strict xfail test) |
-| Failing tests / CI gates | `pytest` exit 5 (no tests); smoke-import broken | 0 failing (1 strict xfail = G-004); smoke-import still broken until patch applied |
-| Test count | 0 | 10 (9 pass, 1 xfail) |
-| Ruff lint errors | 0 | 0 |
-| Coverage | not measured (pytest-cov not in dev extra) | not measured |
+| Open vulns crit / high / med / low | 0 / 3 / 1 / 1 | 0 / 3 / 1 / 1 (unchanged: all blocked on torch pin or `workflow` scope) |
+| Open bugs | 2 (G-004, G-010) | 1 (G-004) |
+| Test count | 10 (9 pass, 1 xfail) | 13 (11 pass, 2 strict xfail: G-004, G-009) |
+| Failing tests | 0 | 0 |
+| Ruff lint / format | 0 / clean | 0 / clean |
+| Bandit | 0 | 0 |
+| Coverage (ad hoc) | not measured | 92% total (`cli.py` 95%, `config.py` 100%) |
+
+Run 1 (2026-10-15): vulns 0/3/1/1 -> 0/3/1/1; tests 0 -> 10; open bugs 3 -> 1.
 
 ## Backlog (prioritized)
 
@@ -52,20 +60,27 @@ No secrets found (gitleaks: 0 in history, 0 in working tree). Bandit: 0 issues. 
    - smoke import: `illusionframe.imageops` -> `illusionframe.config` (or add `imageops`).
    Then remove the `xfail` marker in `tests/test_ci_workflow.py` (strict xfail will flag it as XPASS once fixed).
 1. G-001..G-003: when the Intel-Mac constraint is dropped (or via a Linux/GPU-only extra), move to torch >= 2.6, diffusers >= 0.38, transformers >= 5.10. Until then, when model-loading code is written: keep `trust_remote_code=False`, pass `use_safetensors=True`, pin `revision=` to a commit hash, and allowlist `ILLUSIONFRAME_MODEL_ID` / `TINY_VAE_ID` rather than loading arbitrary repos. Never `torch.load` untrusted files.
-2. G-009: implement the subcommands the Makefile advertises, and give every subparser `set_defaults(func=...)` (add a test that each registered verb has `func`).
+2. G-009: implement the subcommands the Makefile advertises with `set_defaults(func=...)` (`test_every_registered_verb_has_a_handler` enforces it), then drop the xfail in `tests/test_makefile.py`.
 3. Re-run `osv-scanner` where api.osv.dev is reachable.
-4. Add `pytest-cov` to the dev extra to track coverage.
+4. Add `pytest-cov` to the dev extra. Tried in run 2: `uv lock` cannot reach the pytorch-cpu index from the sandbox, so the lockfile could not be regenerated; reverted. Owner: `uv add --optional dev pytest-cov` locally. Until then coverage is measured with `uv run --with pytest-cov`.
+5. When `opencv` / image I/O code lands: validate input paths (no writes outside `ILLUSIONFRAME_RUNS_DIR`), and bound image dimensions before allocating.
 
 ## Learnings
 
 - The vulnerable packages are all pinned down by a single constraint (torch 2.2.2 for Intel macOS), so dependency fixes are blocked until that platform requirement changes.
 - The repo is an early scaffold: the most valuable fixes right now are keeping CI green and honest.
+- (run 2) The sandbox cannot reach download.pytorch.org, so any dependency change that needs `uv lock` must be left to the owner; `uv run --with` covers ad hoc tools.
+- (run 2) `origin/main` had no new commits since run 1; the scan surface is unchanged.
 
 New ideas for future checks:
 1. Statically check that every module named in CI smoke imports exists (now covered by `tests/test_ci_workflow.py`).
 2. Check that Makefile targets only call CLI verbs registered in `cli.build_parser()`.
 3. Once model loading exists, grep for `from_pretrained(` calls missing `revision=` / `use_safetensors=True`.
+4. (run 2) Fail the scan if `uv.lock` and `pyproject.toml` disagree (`uv lock --check`) once the pytorch index is reachable.
+5. (run 2) Track `main` drift: if `origin/main` gains source modules, re-run the custom grep against them first.
+6. (run 2) Add `cv2.imread`/`imwrite` path checks to the custom grep once image I/O exists.
 
 ## Log
 
 - Run 1 — 2026-10-15: baseline scan. 21 dependency advisories in the optional `diffusion` extra (torch/diffusers/transformers), all blocked by the torch 2.2.2 pin, logged as open. Fixed the empty test suite (pytest exit 5) and validated `TORCH_THREADS`; added 10 tests. CI workflow fixes (missing `imageops` import, SHA pinning, `permissions`) were written but could not be pushed (token lacks `workflow` scope), so they are left as an owner patch with a strict-xfail test tracking G-004. No secrets. osv-scanner unavailable (network). Meta-review due at run 4.
+- Run 2 — 2026-10-17: `main` unchanged, merge no-op; no PR review comments. Re-ran pip-audit (same diffusers/transformers/torch advisories, still blocked), bandit (0), custom grep (0), gitleaks history + tree (0). Fixed G-010 (`cli.main` crashed with `AttributeError` on a verb lacking `func`; test `test_subcommand_without_handler_is_usage_error_not_crash`), added `test_every_registered_verb_has_a_handler` and a strict-xfail Makefile/CLI drift test for G-009. Adding pytest-cov failed (`uv lock` cannot reach the pytorch index) and was reverted; coverage measured ad hoc at 92%. Tests 10 -> 13. Not a meta-review run (next at run 4).

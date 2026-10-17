@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 
 from illusionframe import __version__
 
@@ -17,9 +18,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
-    return args.func(args)
+    func = getattr(args, "func", None)
+    if func is None:  # verb registered without set_defaults(func=...)
+        parser.print_usage(sys.stderr)
+        print(f"{parser.prog}: error: subcommand {args.cmd!r} is not implemented yet", file=sys.stderr)
+        return 2
+    return func(args)
