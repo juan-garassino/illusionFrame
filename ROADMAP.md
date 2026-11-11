@@ -43,3 +43,39 @@ displays, the canvas-space invariant — and needs hardware Juan does not own ye
 
 - ESP32-CAM as a Wi-Fi camera (MJPEG `StreamSource`).
 - Building-scale mapping, multiple projectors, audio reactivity.
+- **Several paintings on one wall, found automatically**: an open-vocabulary detector (Grounding DINO
+  or OWLv2, query like `"painting . poster . framed picture"`) gives boxes; box prompts to SAM 2 (or
+  boundaryBrush, which takes box prompts) give masks; `approxPolyDP` / `minAreaRect` turn each mask
+  into a TL-TR-BR-BL quad → one canvas per painting. Assign IDs once per scan (sorted left to right)
+  and match by IoU on re-scan so they do not shuffle. Opt-in alongside manual corner-pin, not instead.
+- **Closed-loop latent walk** for `render_offline`: slerp between noise seeds with the last seed equal
+  to the first, so a rendered clip loops without a jump; optional RIFE/FILM frame interpolation to
+  get more frames per diffusion call.
+- **Mask inset**: erode the mask a few projector pixels before feathering so light does not spill
+  onto the wall around the frame.
+- **Precomputed warps**: compute each painting's projector warp once per mapping (cache the remap
+  tables) instead of solving it every frame; GPU warping only if many paintings.
+- **Event interaction**: guests submit prompts by QR code → small web form → prompt queue; DJ cue or
+  timer switches every painting's prompt together; pose/gesture (MediaPipe) or proximity nudges
+  strength. Prompt changes ride the loop's existing prompt lerp + crossfade.
+
+### Prototype pitfalls (from earlier chats)
+
+- COCO has no "painting" class — filtering Mask R-CNN on label 78 gave "microwave". Use
+  open-vocabulary detection.
+- Blank the projector (full black) while the camera scans or calibrates, or it detects its own output.
+- Camera pixels are not projector pixels: never reuse camera boxes as projector coordinates without
+  the homography, and keep 4-corner quads (an axis-aligned bounding box loses the perspective).
+
+### Parked ideas (earlier chats)
+
+Recorded, not adopted — the local decision in brackets stands.
+
+- Zero-manual-geometry setup: detection + automatic camera↔projector calibration with no clicks
+  [manual corner-pin first; auto-detection above is opt-in].
+- ArUco/ChArUco pattern for calibration [dot-differencing, robust on a textured painting].
+- FLUX (schnell / Kontext) img2img, local or via the hosted API [SD-Turbo + TAESD, fits CPU].
+- Streamlit operator UI plus a separate pygame/moderngl fullscreen renderer [OpenCV window on the
+  main thread, session.toml].
+- Generate each painting's walk once, cache frames to disk, show phase only plays them back
+  [live mutation loop; `render_offline` covers recorded output].
